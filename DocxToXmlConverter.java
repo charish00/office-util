@@ -46,9 +46,6 @@ public class DocxToXmlConverter {
 				Element partE = DocumentHelper.createElement("pkg:part");
 				partE.addAttribute("pkg:contentType", packagePart.getContentType());
 				partE.addAttribute("pkg:name", packagePart.getPartName().getName());
-				if ("image/png".equals(packagePart.getContentType())) {
-					partE.addAttribute("pkg:compression", "store");
-				}
 				setPart(partE, packagePart);
 				document.getRootElement().add(partE);
 			}
@@ -70,18 +67,7 @@ public class DocxToXmlConverter {
 
 	private void setPart(Element part, PackagePart packagePart) throws DocumentException, IOException {
 		String contentType = packagePart.getContentType();
-
-		switch (contentType) {
-		case "image/png":
-		case "image/x-emf":
-		case "application/vnd.openxmlformats-officedocument.oleObject": {
-			byte[] d = IOUtils.toByteArray(packagePart.getInputStream());
-			Element data = DocumentHelper.createElement("pkg:binaryData");
-			data.setText(Base64.getEncoder().encodeToString(d));
-			part.add(data);
-			break;
-		}
-		default:
+		if (contentType.endsWith("xml")) {
 			if (packagePart instanceof PackagePropertiesPart) {
 				Document properties = DocumentHelper
 						.parseText("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?> \r\n"
@@ -91,12 +77,8 @@ public class DocxToXmlConverter {
 								+ "        xmlns:dcterms=\"http://purl.org/dc/terms/\" \r\n"
 								+ "        xmlns:dcmitype=\"http://purl.org/dc/dcmitype/\" \r\n"
 								+ "        xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\r\n"
-								+ "        <dc:creator>lenovo</dc:creator>\r\n"
-								+ "        <cp:lastModifiedBy>lenovo</cp:lastModifiedBy>\r\n"
-								+ "        <cp:revision>2</cp:revision>\r\n"
-								+ "        <dcterms:created xsi:type=\"dcterms:W3CDTF\">2019-03-01T08:06:00Z</dcterms:created>\r\n"
-								+ "        <dcterms:modified xsi:type=\"dcterms:W3CDTF\">2019-03-01T08:06:00Z</dcterms:modified>\r\n"
-								+ "    </cp:coreProperties>\r\n" + "</pkg:xmlData>");
+								+ "    </cp:coreProperties>\r\n" 
+								+ "</pkg:xmlData>");
 				part.add(properties.getRootElement());
 			} else {
 				byte[] d = IOUtils.toByteArray(packagePart.getInputStream());
@@ -106,7 +88,11 @@ public class DocxToXmlConverter {
 				data.add(properties);
 				part.add(data);
 			}
-			break;
+		} else {
+			byte[] d = IOUtils.toByteArray(packagePart.getInputStream());
+			Element data = DocumentHelper.createElement("pkg:binaryData");
+			data.setText(Base64.getEncoder().encodeToString(d));
+			part.add(data);
 		}
 	}
 
